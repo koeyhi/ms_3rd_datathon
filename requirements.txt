@@ -1,4 +1,5 @@
 joblib
 catboost
 lightgbm
+scikit-learn==1.5.2
 xgboost
