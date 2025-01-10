@@ -1,3 +1,3 @@
 joblib
 catboost
-sklearn
+scikit-learn
