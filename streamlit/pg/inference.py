@@ -4,7 +4,7 @@ import pandas as pd
 import json
 
 st.set_page_config(layout="wide")
-DATA_PATH = "data/"
+DATA_PATH = "streamlit/data/"
 
 teams_train = pd.read_csv(f"{DATA_PATH}teams_train.csv")
 teams_test = pd.read_csv(f"{DATA_PATH}teams_test.csv")

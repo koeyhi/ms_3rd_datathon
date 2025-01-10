@@ -2,7 +2,7 @@ import pandas as pd
 import streamlit as st
 
 st.set_page_config(page_title="Dashboard", layout="wide")
-DATA_PATH = "../data/"
+DATA_PATH = "streamlit/data/"
 
 df = pd.read_csv(f"{DATA_PATH}featured_data.csv")
 
