@@ -13,13 +13,13 @@ train_data = pd.concat([teams_train, teams_test], ignore_index=True)
 featured_data = pd.read_csv(f"{DATA_PATH}featured_data.csv")
 featured_data.drop("gameid", axis=1, inplace=True)
 
-with open("data/teams.json", "r") as f:
+with open("streamlit/data/teams.json", "r") as f:
     teams = json.load(f)
 
-with open("data/champions.json", "r") as f:
+with open("streamlit/data/champions.json", "r") as f:
     champions = json.load(f)
 
-with open("data/leagues.json", "r") as f:
+with open("streamlit/data/leagues.json", "r") as f:
     leagues = json.load(f)
 
 temp_opp_teams = (
@@ -40,13 +40,13 @@ train_data["minute"] = train_data["date"].dt.minute
 import joblib
 from catboost import CatBoostClassifier, Pool
 
-stacking_model = joblib.load("artifacts/stacking_0107.pkl")
+stacking_model = joblib.load("streamlit/artifacts/stacking_0107.pkl")
 
-with open("data/cat_features.json", "r") as f:
+with open("streamlit/data/cat_features.json", "r") as f:
     cat_cols = json.load(f)
 
 cat_model = CatBoostClassifier()
-cat_model.load_model("artifacts/cat_0107.cbm")
+cat_model.load_model("streamlit/artifacts/cat_0107.cbm")
 
 
 def add_features(input_data, train_data):
