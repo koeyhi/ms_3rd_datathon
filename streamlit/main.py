@@ -2,7 +2,10 @@ import streamlit as st
 import subprocess
 import sys
 
+print(sys.version)
+
 try:
+    subprocess.run([sys.executable, "-m", "pip", "install", "--upgrade", "pip"])
     subprocess.run([sys.executable, "-m", "pip", "install", "joblib"], check=True)
 except subprocess.CalledProcessError as e:
     print(f"패키지 설치 실패: {e}")
