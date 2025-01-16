@@ -3,6 +3,7 @@ import numpy as np
 import streamlit as st
 import pandas as pd
 import json
+import pytz
 
 st.set_page_config(layout="wide")
 DATA_PATH = "streamlit/data/"
@@ -37,23 +38,105 @@ temp_opp_teams = (
 train_data = pd.concat([train_data, temp_opp_teams], axis=1)
 train_data.drop("gameid", axis=1, inplace=True)
 
-train_data["date"] = pd.to_datetime(train_data["date"])
-train_data["year"] = train_data["date"].dt.year
-train_data["month"] = train_data["date"].dt.month
-train_data["day"] = train_data["date"].dt.day
-train_data["hour"] = train_data["date"].dt.hour
-train_data["minute"] = train_data["date"].dt.minute
-
 import joblib
 from catboost import CatBoostClassifier, Pool
 
-stacking_model = joblib.load("streamlit/artifacts/stacking_0107.pkl")
+jh_stacking = joblib.load("streamlit/artifacts/stacking_0107.pkl")
 
 with open("streamlit/data/cat_features.json", "r") as f:
     cat_cols = json.load(f)
 
-cat_model = CatBoostClassifier()
-cat_model.load_model("streamlit/artifacts/cat_0107.cbm")
+jh_cat = CatBoostClassifier()
+jh_cat.load_model("streamlit/artifacts/cat_0107.cbm")
+
+hj_stacking = joblib.load("streamlit/artifacts/stacking_0115_th4.pkl")
+
+
+def split_time(input_data):
+    input_data["date"] = pd.to_datetime(input_data["date"])
+    input_data["year"] = input_data["date"].dt.year
+    input_data["month"] = input_data["date"].dt.month
+    input_data["day"] = input_data["date"].dt.day
+    input_data["hour"] = input_data["date"].dt.hour
+    input_data["minute"] = input_data["date"].dt.minute
+
+    return input_data
+
+
+def update_time(input_data):
+    league_locations = {
+        "LCK": "Asia/Seoul",
+        "LEC": "Europe/Berlin",
+        "LCS": "America/Los_Angeles",
+        "CBLOL": "America/Sao_Paulo",
+        "PCS": "Asia/Taipei",
+        "VCS": "Asia/Ho_Chi_Minh",
+        "MSI": {2022: "Asia/Seoul", 2023: "Europe/London", 2024: "Asia/Shanghai"},
+        "WLDs": {
+            2022: "America/Los_Angeles",
+            2023: "Asia/Seoul",
+            2024: "Europe/Berlin",
+        },
+    }
+
+    date_str = input_data["date"]
+    if len(date_str.split(" ")[1].split(":")[0]) == 1:
+        date_str = date_str.replace(" ", " 0", 1)
+
+    if len(date_str.split(":")) == 2:
+        date_str += ":00"
+
+    input_data["date"] = date_str
+
+    utc = pytz.timezone("UTC")
+
+    local_times = []
+
+    utc_time_str = input_data["date"]
+    league = input_data["league"]
+
+    utc_time = datetime.strptime(utc_time_str, "%Y-%m-%d %H:%M:%S")
+    utc_time = utc.localize(utc_time)
+
+    year = utc_time.year
+
+    if league in league_locations:
+        if isinstance(league_locations[league], dict):
+            local_tz = pytz.timezone(league_locations[league].get(year, "UTC"))
+        else:
+            local_tz = pytz.timezone(league_locations[league])
+        local_time = utc_time.astimezone(local_tz)
+        local_time_str = local_time.strftime("%Y-%m-%d %H:%M:%S")
+    else:
+        local_time_str = utc_time_str
+
+    local_times.append(local_time_str)
+
+    input_data["local_time"] = local_times
+    input_data["local_time"] = pd.to_datetime(input_data["local_time"])
+
+    input_data["year"] = input_data["local_time"].dt.year
+    input_data["month"] = input_data["local_time"].dt.month
+    input_data["day"] = input_data["local_time"].dt.day
+    input_data["hour"] = input_data["local_time"].dt.hour
+    input_data["minute"] = input_data["local_time"].dt.minute
+
+    input_data["hour_sin"] = np.sin(2 * np.pi * input_data["hour"] / 24)
+    input_data["hour_cos"] = np.cos(2 * np.pi * input_data["hour"] / 24)
+
+    input_data = input_data.drop(columns=["local_time", "date"])
+    input_data["game_per_day"] = (
+        input_data.groupby(["teamname", "year", "month", "day"]).cumcount() + 1
+    )  # ?
+
+    input_data.loc[input_data["hour"] < 6, "hour"] += 24
+    input_data["time_period"] = pd.cut(
+        input_data["hour"],
+        bins=[-1, 12, 18, 30],
+        labels=["0", "1", "2"],
+    )
+
+    return input_data
 
 
 def add_recent10_stats(input_data, train_data):
@@ -302,22 +385,39 @@ with st.form("예측 폼", border=True):
     }
 
     if submit_button:
-        input_data = add_recent10_stats(input_data, train_data)
-        input_data = add_h2h_winrate(input_data, train_data)
-        input_data = add_league_winrate(input_data, train_data)
-        input_data, cat_input_data, cat_featured_data = split_data(
-            input_data, jh_featured_data
+        input_data_for_jh_model = update_time(input_data)
+        input_data_for_jh_model = add_recent10_stats(
+            input_data_for_jh_model, train_data
         )
-        input_data = preprocess(input_data, train_data, champions, teams)
-        jh_featured_data = preprocess(jh_featured_data, train_data, champions, teams)
+        input_data_for_jh_model = add_h2h_winrate(input_data_for_jh_model, train_data)
+        input_data_for_jh_model = add_league_winrate(
+            input_data_for_jh_model, train_data
+        )
+        (
+            input_data_for_jh_model,
+            cat_input_data_for_jh_model,
+            cat_featured_data_for_jh_model,
+        ) = split_data(input_data_for_jh_model, jh_featured_data)
+        input_data_for_jh_model = preprocess(
+            input_data_for_jh_model, train_data, champions, teams
+        )
+        cat_featured_data_for_jh_model = preprocess(
+            cat_featured_data_for_jh_model, train_data, champions, teams
+        )
 
-        input_data = scale(input_data, jh_featured_data)
-        cat_input_data = scale(cat_input_data, jh_featured_data)
-        cat_featured_data = scale(cat_featured_data, jh_featured_data)
-        cat_input_data = Pool(cat_input_data, cat_features=cat_cols)
+        input_data_for_jh_model = scale(input_data_for_jh_model, jh_featured_data)
+        cat_input_data_for_jh_model = scale(
+            cat_input_data_for_jh_model, jh_featured_data
+        )
+        cat_featured_data_for_jh_model = scale(
+            cat_featured_data_for_jh_model, jh_featured_data
+        )
+        cat_input_data_for_jh_model = Pool(
+            cat_input_data_for_jh_model, cat_features=cat_cols
+        )
 
-        pred_stacking = stacking_model.predict_proba(input_data)
-        pred_cat = cat_model.predict_proba(cat_input_data)
+        pred_stacking = jh_stacking.predict_proba(input_data_for_jh_model)
+        pred_cat = jh_cat.predict_proba(cat_input_data_for_jh_model)
 
         pred = np.mean([pred_stacking, pred_cat], axis=0)
         st.write(f"{teamname} 승리 확률: {pred[0][1] * 100:.1f}%")
