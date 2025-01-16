@@ -385,7 +385,7 @@ with st.form("예측 폼", border=True):
     }
 
     if submit_button:
-        input_data_for_jh_model = update_time(input_data)
+        input_data_for_jh_model = split_time(input_data)
         input_data_for_jh_model = add_recent10_stats(
             input_data_for_jh_model, train_data
         )
