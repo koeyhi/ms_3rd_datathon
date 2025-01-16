@@ -11,8 +11,14 @@ teams_train = pd.read_csv(f"{DATA_PATH}teams_train.csv")
 teams_test = pd.read_csv(f"{DATA_PATH}teams_test.csv")
 train_data = pd.concat([teams_train, teams_test], ignore_index=True)
 
-featured_data = pd.read_csv(f"{DATA_PATH}featured_data.csv")
-featured_data.drop("gameid", axis=1, inplace=True)
+jh_featured_data = pd.read_csv(f"{DATA_PATH}featured_data.csv")
+jh_featured_data.drop("gameid", axis=1, inplace=True)
+
+hj_featured_train = pd.read_csv(f"{DATA_PATH}TF_train_0114.csv")
+hj_featured_test = pd.read_csv(f"{DATA_PATH}TF_test_0114.csv")
+hj_featured_data = pd.concat([hj_featured_train, hj_featured_test], ignore_index=True)
+hj_featured_data.drop("gameid", axis=1, inplace=True)
+hj_featured_data["side"] = hj_featured_data["side"].map({"Blue": 0, "Red": 1})
 
 with open("streamlit/data/teams.json", "r") as f:
     teams = json.load(f)
@@ -176,6 +182,7 @@ def split_data(input_data, featured_data):
     cat_featured_data = featured_data.copy()
 
     cat_cols = [
+        "league",
         "teamname",
         "opp_teamname",
         "ban1",
@@ -299,15 +306,14 @@ with st.form("예측 폼", border=True):
         input_data = add_h2h_winrate(input_data, train_data)
         input_data = add_league_winrate(input_data, train_data)
         input_data, cat_input_data, cat_featured_data = split_data(
-            input_data, featured_data
+            input_data, jh_featured_data
         )
         input_data = preprocess(input_data, train_data, champions, teams)
-        featured_data = preprocess(featured_data, train_data, champions, teams)
+        jh_featured_data = preprocess(jh_featured_data, train_data, champions, teams)
 
-        input_data = scale(input_data, featured_data)
-        cat_input_data = scale(cat_input_data, featured_data)
-        cat_featured_data = scale(cat_featured_data, featured_data)
-
+        input_data = scale(input_data, jh_featured_data)
+        cat_input_data = scale(cat_input_data, jh_featured_data)
+        cat_featured_data = scale(cat_featured_data, jh_featured_data)
         cat_input_data = Pool(cat_input_data, cat_features=cat_cols)
 
         pred_stacking = stacking_model.predict_proba(input_data)
