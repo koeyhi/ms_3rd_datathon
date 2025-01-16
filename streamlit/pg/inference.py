@@ -1,4 +1,5 @@
 from datetime import datetime
+import numpy as np
 import streamlit as st
 import pandas as pd
 import json
@@ -49,7 +50,7 @@ cat_model = CatBoostClassifier()
 cat_model.load_model("streamlit/artifacts/cat_0107.cbm")
 
 
-def add_features(input_data, train_data):
+def add_recent10_stats(input_data, train_data):
     stats_columns = [
         "result",
         "gamelength",
@@ -82,7 +83,6 @@ def add_features(input_data, train_data):
         "vspm",
     ]
 
-    # 최근 10경기 데이터 추가
     input_team_data = (
         train_data[train_data["teamname"] == input_data["teamname"]]
         .sort_values(["year", "month", "day", "hour", "minute"])
@@ -116,7 +116,10 @@ def add_features(input_data, train_data):
     for feature in recent10_stats:
         input_data[feature] = recent10_stats[feature]
 
-    # 상대전적 추가
+    return input_data
+
+
+def add_h2h_winrate(input_data, train_data):
     head_to_head = train_data[
         (
             (train_data["teamname"] == input_data["teamname"])
@@ -143,7 +146,10 @@ def add_features(input_data, train_data):
 
     input_data["h2h_winrate"] = h2h_winrate
 
-    # 리그 승률
+    return input_data
+
+
+def add_league_winrate(input_data, train_data):
     team_league_games = (
         train_data[
             (train_data["teamname"] == input_data["teamname"])
@@ -246,13 +252,13 @@ def scale(input_data, featured_data):
 
 
 with st.form("예측 폼", border=True):
-    teamname = st.selectbox("팀 선택", teams)
-    opp_teamname = st.selectbox("상대 팀 선택", teams)
+    teamname = st.selectbox("팀", teams)
+    opp_teamname = st.selectbox("상대 팀", teams)
     patch = st.number_input("패치 버전", value=14.23)
-    league = st.selectbox("리그 선택", leagues)
-    side = st.selectbox("진영 선택", ["Blue", "Red"])
-    date = st.date_input("날짜 선택", value=datetime.today())
-    time = st.time_input("시간 선택", value=datetime.now().time())
+    league = st.selectbox("리그", leagues)
+    side = st.selectbox("진영", ["Blue", "Red"])
+    date = st.date_input("날짜", value=datetime.today())
+    time = st.time_input("시간", value=datetime.now().time())
     ban1 = st.selectbox("밴 1", champions)
     ban2 = st.selectbox("밴 2", champions)
     ban3 = st.selectbox("밴 3", champions)
@@ -289,7 +295,9 @@ with st.form("예측 폼", border=True):
     }
 
     if submit_button:
-        input_data = add_features(input_data, train_data)
+        input_data = add_recent10_stats(input_data, train_data)
+        input_data = add_h2h_winrate(input_data, train_data)
+        input_data = add_league_winrate(input_data, train_data)
         input_data, cat_input_data, cat_featured_data = split_data(
             input_data, featured_data
         )
@@ -305,6 +313,6 @@ with st.form("예측 폼", border=True):
         pred_stacking = stacking_model.predict_proba(input_data)
         pred_cat = cat_model.predict_proba(cat_input_data)
 
-        pred = (pred_stacking + pred_cat) / 2
+        pred = np.mean([pred_stacking, pred_cat], axis=0)
         st.write(f"{teamname} 승리 확률: {pred[0][1] * 100:.1f}%")
         st.write(f"{opp_teamname} 승리 확률: {pred[0][0] * 100:.1f}%")
