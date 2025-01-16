@@ -6,7 +6,8 @@ import json
 import pytz
 
 st.set_page_config(layout="wide")
-DATA_PATH = "streamlit/data/"
+DATA_PATH = "data/"
+ARTIFACTS_PATH = "artifacts/"
 
 teams_train = pd.read_csv(f"{DATA_PATH}teams_train.csv")
 teams_test = pd.read_csv(f"{DATA_PATH}teams_test.csv")
@@ -21,13 +22,13 @@ hj_featured_data = pd.concat([hj_featured_train, hj_featured_test], ignore_index
 hj_featured_data.drop("gameid", axis=1, inplace=True)
 hj_featured_data["side"] = hj_featured_data["side"].map({"Blue": 0, "Red": 1})
 
-with open("streamlit/data/teams.json", "r") as f:
+with open(f"{DATA_PATH}teams.json", "r") as f:
     teams = json.load(f)
 
-with open("streamlit/data/champions.json", "r") as f:
+with open(f"{DATA_PATH}champions.json", "r") as f:
     champions = json.load(f)
 
-with open("streamlit/data/leagues.json", "r") as f:
+with open(f"{DATA_PATH}leagues.json", "r") as f:
     leagues = json.load(f)
 
 temp_opp_teams = (
@@ -41,26 +42,23 @@ train_data.drop("gameid", axis=1, inplace=True)
 import joblib
 from catboost import CatBoostClassifier, Pool
 
-jh_stacking = joblib.load("streamlit/artifacts/stacking_0107.pkl")
+jh_stacking = joblib.load(f"{ARTIFACTS_PATH}stacking_0107.pkl")
 
-with open("streamlit/data/cat_features.json", "r") as f:
+with open(f"{DATA_PATH}cat_features.json", "r") as f:
     cat_cols = json.load(f)
 
 jh_cat = CatBoostClassifier()
-jh_cat.load_model("streamlit/artifacts/cat_0107.cbm")
+jh_cat.load_model(f"{ARTIFACTS_PATH}cat_0107.cbm")
 
-hj_stacking = joblib.load("streamlit/artifacts/stacking_0115_th4.pkl")
+hj_stacking = joblib.load(f"{ARTIFACTS_PATH}stacking_0115_th4.pkl")
 
-
-def split_time(input_data):
-    input_data["date"] = pd.to_datetime(input_data["date"])
-    input_data["year"] = input_data["date"].dt.year
-    input_data["month"] = input_data["date"].dt.month
-    input_data["day"] = input_data["date"].dt.day
-    input_data["hour"] = input_data["date"].dt.hour
-    input_data["minute"] = input_data["date"].dt.minute
-
-    return input_data
+train_data["date"] = pd.to_datetime(train_data["date"])
+train_data["year"] = train_data["date"].dt.year
+train_data["month"] = train_data["date"].dt.month
+train_data["day"] = train_data["date"].dt.day
+train_data["hour"] = train_data["date"].dt.hour
+train_data["minute"] = train_data["date"].dt.minute
+train_data.drop("date", axis=1, inplace=True)
 
 
 def update_time(input_data):
@@ -79,7 +77,7 @@ def update_time(input_data):
         },
     }
 
-    date_str = input_data["date"]
+    date_str = f"{input_data['year']}-{input_data['month']}-{input_data['day']} {input_data['hour']}:{input_data['minute']}"
     if len(date_str.split(" ")[1].split(":")[0]) == 1:
         date_str = date_str.replace(" ", " 0", 1)
 
@@ -385,10 +383,7 @@ with st.form("예측 폼", border=True):
     }
 
     if submit_button:
-        input_data_for_jh_model = split_time(input_data)
-        input_data_for_jh_model = add_recent10_stats(
-            input_data_for_jh_model, train_data
-        )
+        input_data_for_jh_model = add_recent10_stats(input_data, train_data)
         input_data_for_jh_model = add_h2h_winrate(input_data_for_jh_model, train_data)
         input_data_for_jh_model = add_league_winrate(
             input_data_for_jh_model, train_data
