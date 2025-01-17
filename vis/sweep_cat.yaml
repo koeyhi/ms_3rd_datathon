@@ -1,0 +1,29 @@
+method: bayes
+metric:
+  name: accuracy
+  goal: maximize
+parameters:
+  iterations:
+    distribution: q_uniform
+    min: 300
+    max: 600
+  learning_rate:
+    distribution: uniform
+    min: 0.15
+    max: 0.3
+  depth:
+    distribution: q_uniform
+    min: 8
+    max: 12
+  l2_leaf_reg:
+    distribution: uniform
+    min: 6.0
+    max: 10.0
+  min_child_samples:
+    distribution: q_uniform
+    min: 8
+    max: 16
+  max_bin:
+    distribution: q_uniform
+    min: 300
+    max: 400

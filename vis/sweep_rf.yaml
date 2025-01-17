@@ -1,0 +1,28 @@
+method: bayes
+metric:
+  name: accuracy
+  goal: maximize
+parameters:
+  n_estimators:
+    distribution: q_uniform
+    min: 800
+    max: 1100
+  max_depth:
+    distribution: q_uniform
+    min: 15
+    max: 21
+  min_samples_split:
+    distribution: q_uniform
+    min: 15
+    max: 23
+  min_samples_leaf:
+    distribution: q_uniform
+    min: 7
+    max: 11
+  max_features:
+    distribution: q_uniform
+    min: 0.7
+    max: 0.85
+  bootstrap:
+    distribution: categorical
+    values: [False]
