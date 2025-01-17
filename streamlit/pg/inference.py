@@ -16,8 +16,8 @@ train_data = pd.concat([teams_train, teams_test], ignore_index=True)
 jh_featured_data = pd.read_csv(f"{DATA_PATH}featured_data.csv")
 jh_featured_data.drop("gameid", axis=1, inplace=True)
 
-hj_featured_train = pd.read_csv(f"{DATA_PATH}TF_train_0114.csv")
-hj_featured_test = pd.read_csv(f"{DATA_PATH}TF_test_0114.csv")
+hj_featured_train = pd.read_csv(f"{DATA_PATH}TEST_train.csv")
+hj_featured_test = pd.read_csv(f"{DATA_PATH}TEST_test.csv")
 hj_featured_data = pd.concat([hj_featured_train, hj_featured_test], ignore_index=True)
 hj_featured_data.drop("gameid", axis=1, inplace=True)
 hj_featured_data["side"] = hj_featured_data["side"].map({"Blue": 0, "Red": 1})
@@ -113,25 +113,26 @@ def update_time(input_data):
     input_data["local_time"] = local_times
     input_data["local_time"] = pd.to_datetime(input_data["local_time"])
 
-    input_data["year"] = input_data["local_time"].dt.year
-    input_data["month"] = input_data["local_time"].dt.month
-    input_data["day"] = input_data["local_time"].dt.day
-    input_data["hour"] = input_data["local_time"].dt.hour
-    input_data["minute"] = input_data["local_time"].dt.minute
+    input_data["year"] = int(input_data["local_time"].year[0])
+    input_data["month"] = int(input_data["local_time"].month[0])
+    input_data["day"] = int(input_data["local_time"].day[0])
+    input_data["hour"] = int(input_data["local_time"].hour[0])
+    input_data["minute"] = int(input_data["local_time"].minute[0])
 
     input_data["hour_sin"] = np.sin(2 * np.pi * input_data["hour"] / 24)
     input_data["hour_cos"] = np.cos(2 * np.pi * input_data["hour"] / 24)
 
-    input_data = input_data.drop(columns=["local_time", "date"])
-    input_data["game_per_day"] = (
-        input_data.groupby(["teamname", "year", "month", "day"]).cumcount() + 1
-    )  # ?
+    del input_data["local_time"]
+    del input_data["date"]
 
-    input_data.loc[input_data["hour"] < 6, "hour"] += 24
-    input_data["time_period"] = pd.cut(
-        input_data["hour"],
-        bins=[-1, 12, 18, 30],
-        labels=["0", "1", "2"],
+    if input_data["hour"] < 6:
+        input_data["hour"] += 24
+    input_data["time_period"] = int(
+        pd.cut(
+            [input_data["hour"]],
+            bins=[-1, 12, 18, 30],
+            labels=["0", "1", "2"],
+        )[0]
     )
 
     return input_data
@@ -393,12 +394,33 @@ with st.form("예측 폼", border=True):
             cat_input_data_for_jh_model,
             cat_featured_data_for_jh_model,
         ) = split_data(input_data_for_jh_model, jh_featured_data)
+
+        input_data_for_hj_model = update_time(input_data)
+        input_data_for_hj_model = add_recent10_stats(
+            input_data_for_hj_model, train_data
+        )
+        input_data_for_hj_model = add_h2h_winrate(input_data_for_hj_model, train_data)
+        input_data_for_hj_model = add_league_winrate(
+            input_data_for_hj_model, train_data
+        )
+        (
+            input_data_for_hj_model,
+            cat_input_data_for_hj_model,
+            cat_featured_data_for_hj_model,
+        ) = split_data(input_data_for_hj_model, hj_featured_data)
+
         input_data_for_jh_model = preprocess(
             input_data_for_jh_model, train_data, champions, teams
         )
         cat_featured_data_for_jh_model = preprocess(
             cat_featured_data_for_jh_model, train_data, champions, teams
         )
+        jh_featured_data = preprocess(jh_featured_data, train_data, champions, teams)
+
+        input_data_for_hj_model = preprocess(
+            input_data_for_hj_model, train_data, champions, teams
+        )
+        hj_featured_data = preprocess(hj_featured_data, train_data, champions, teams)
 
         input_data_for_jh_model = scale(input_data_for_jh_model, jh_featured_data)
         cat_input_data_for_jh_model = scale(
@@ -411,9 +433,13 @@ with st.form("예측 폼", border=True):
             cat_input_data_for_jh_model, cat_features=cat_cols
         )
 
-        pred_stacking = jh_stacking.predict_proba(input_data_for_jh_model)
-        pred_cat = jh_cat.predict_proba(cat_input_data_for_jh_model)
+        input_data_for_hj_model = scale(input_data_for_hj_model, hj_featured_data)
 
-        pred = np.mean([pred_stacking, pred_cat], axis=0)
+        pred_jh_stacking = jh_stacking.predict_proba(input_data_for_jh_model)
+        pred_jh_cat = jh_cat.predict_proba(cat_input_data_for_jh_model)
+
+        pred_hj_stacking = hj_stacking.predict_proba(input_data_for_hj_model)
+
+        pred = np.mean([pred_jh_stacking, pred_jh_cat, pred_hj_stacking], axis=0)
         st.write(f"{teamname} 승리 확률: {pred[0][1] * 100:.1f}%")
         st.write(f"{opp_teamname} 승리 확률: {pred[0][0] * 100:.1f}%")
