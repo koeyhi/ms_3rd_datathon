@@ -52,7 +52,7 @@ with open(f"{DATA_PATH}cat_features.json", "r") as f:
 jh_cat = CatBoostClassifier()
 jh_cat.load_model(f"{ARTIFACTS_PATH}cat_0107.cbm")
 
-hj_stacking = joblib.load(f"{ARTIFACTS_PATH}5_stacking_model.pkl")
+hj_stacking = joblib.load(f"{ARTIFACTS_PATH}5_stacking_model_0120.pkl")
 
 train_data["date"] = pd.to_datetime(train_data["date"])
 train_data["year"] = train_data["date"].dt.year
