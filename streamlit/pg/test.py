@@ -125,27 +125,27 @@ with col1:
 # 두 번째 그래프
 with col2:
     available_years = sorted(player_df["year"].unique())
-    selected_year = st.selectbox("연도 선택", available_years)
+    selected_year = st.selectbox("연도 선택", available_years, key="player_year")
 
     available_leagues = player_df[player_df["year"] == selected_year]["league"].unique()
-    selected_league = st.selectbox("리그 선택", available_leagues)
+    selected_league = st.selectbox("리그 선택", available_leagues, key="player_league")
 
     available_splits = player_df[
         (player_df["year"] == selected_year) & (player_df["league"] == selected_league)
     ]["split"].unique()
-    selected_split = st.selectbox("스플릿 선택", available_splits)
+    selected_split = st.selectbox("스플릿 선택", available_splits, key="player_split")
 
     available_players = player_df[
         (player_df["year"] == selected_year)
         & (player_df["league"] == selected_league)
         & (player_df["split"] == selected_split)
     ]["playername"].unique()
-    selected_player = st.selectbox("선수 선택", available_players)
+    selected_player = st.selectbox("선수 선택", available_players, key="player_name")
 
     # 사용자가 선택할 컬럼 선택
     metrics = ["kda", "team kpm", "assists", "earned gpm", "kills"]
     selected_metrics = st.multiselect(
-        "그래프에 표시할 컬럼 선택", metrics, default=metrics
+        "그래프에 표시할 컬럼 선택", metrics, default=metrics, key="player_metrics"
     )
 
     # 선택된 선수의 스플릿별 전체 평균 데이터 필터링
