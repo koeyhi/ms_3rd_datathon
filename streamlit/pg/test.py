@@ -37,7 +37,7 @@ with col1:
     selected_team = st.selectbox("팀 선택", available_teams)
 
     # 사용자가 선택할 컬럼 선택
-    metrics = ["inhibitors", "team kpm", "towers", "earned gpm", "gspd"]
+    metrics = ['firstblood', 'firsttower', 'void_grubs', 'dragons' ,'barons']
     selected_metrics = st.multiselect(
         "그래프에 표시할 컬럼 선택", metrics, default=metrics
     )
@@ -92,7 +92,7 @@ with col1:
 
         elif len(selected_metrics) == 5:
             # 5개 선택 시: 방사형 그래프
-            max_values = [3, 1, 11, 1500, 0.1]
+            max_values = [1, 1, 5, 5, 2]
             normalized_values = [
                 v / max_val for v, max_val in zip(avg_values, max_values)
             ]
@@ -143,7 +143,7 @@ with col2:
     selected_player = st.selectbox("선수 선택", available_players, key="player_name")
 
     # 사용자가 선택할 컬럼 선택
-    metrics = ["kda", "team kpm", "assists", "earned gpm", "kills"]
+    metrics = ['kda', 'dpm', 'total cs', 'totalgold', 'visionscore']
     selected_metrics = st.multiselect(
         "그래프에 표시할 컬럼 선택", metrics, default=metrics, key="player_metrics"
     )
@@ -198,7 +198,7 @@ with col2:
 
         elif len(selected_metrics) == 5:
             # 5개 선택 시: 방사형 그래프
-            max_values = [10, 30, 10, 10, 300]
+            max_values = [10, 800, 500, 15000, 100]
             normalized_values = [
                 v / max_val for v, max_val in zip(avg_values, max_values)
             ]

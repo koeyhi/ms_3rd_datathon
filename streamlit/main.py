@@ -13,8 +13,6 @@ pg_list = [
     st.Page("pg/dashboard.py", title="대시보드"),
     st.Page("pg/inference.py", title="예측"),
     st.Page("pg/result.py", title="상관관계"),
-    st.Page("pg/player.py", title="player"),
-    st.Page("pg/team.py", title="team"),
     st.Page("pg/test.py", title="test"),
 ]
 
