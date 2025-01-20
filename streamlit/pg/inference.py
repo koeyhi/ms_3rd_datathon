@@ -6,8 +6,10 @@ import json
 import pytz
 
 st.set_page_config(layout="wide")
-DATA_PATH = "data/"
-ARTIFACTS_PATH = "artifacts/"
+DATA_PATH = "streamlit/data/"
+ARTIFACTS_PATH = "streamlit/artifacts/"
+# DATA_PATH = "data/"
+# ARTIFACTS_PATH = "artifacts/"
 
 teams_train = pd.read_csv(f"{DATA_PATH}teams_train.csv")
 teams_test = pd.read_csv(f"{DATA_PATH}teams_test.csv")
@@ -16,8 +18,8 @@ train_data = pd.concat([teams_train, teams_test], ignore_index=True)
 jh_featured_data = pd.read_csv(f"{DATA_PATH}featured_data.csv")
 jh_featured_data.drop("gameid", axis=1, inplace=True)
 
-hj_featured_train = pd.read_csv(f"{DATA_PATH}TEST_train.csv")
-hj_featured_test = pd.read_csv(f"{DATA_PATH}TEST_test.csv")
+hj_featured_train = pd.read_csv(f"{DATA_PATH}TEST88_train.csv")
+hj_featured_test = pd.read_csv(f"{DATA_PATH}TEST88_test.csv")
 hj_featured_data = pd.concat([hj_featured_train, hj_featured_test], ignore_index=True)
 hj_featured_data.drop("gameid", axis=1, inplace=True)
 hj_featured_data["side"] = hj_featured_data["side"].map({"Blue": 0, "Red": 1})
@@ -50,7 +52,7 @@ with open(f"{DATA_PATH}cat_features.json", "r") as f:
 jh_cat = CatBoostClassifier()
 jh_cat.load_model(f"{ARTIFACTS_PATH}cat_0107.cbm")
 
-hj_stacking = joblib.load(f"{ARTIFACTS_PATH}stacking_0115_th4.pkl")
+hj_stacking = joblib.load(f"{ARTIFACTS_PATH}5_stacking_model.pkl")
 
 train_data["date"] = pd.to_datetime(train_data["date"])
 train_data["year"] = train_data["date"].dt.year
@@ -438,6 +440,7 @@ with st.form("예측 폼", border=True):
         pred_jh_stacking = jh_stacking.predict_proba(input_data_for_jh_model)
         pred_jh_cat = jh_cat.predict_proba(cat_input_data_for_jh_model)
 
+        input_data_for_hj_model.columns = hj_featured_data.columns
         pred_hj_stacking = hj_stacking.predict_proba(input_data_for_hj_model)
 
         pred = np.mean([pred_jh_stacking, pred_jh_cat, pred_hj_stacking], axis=0)
