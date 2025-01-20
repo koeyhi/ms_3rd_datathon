@@ -6,10 +6,8 @@ import json
 import pytz
 
 st.set_page_config(layout="wide")
-DATA_PATH = "streamlit/data/"
+DATA_PATH = "LoLesports_data/"
 ARTIFACTS_PATH = "output/"
-# DATA_PATH = "data/"
-# ARTIFACTS_PATH = "../output/"
 
 teams_train = pd.read_csv(f"{DATA_PATH}teams_train.csv")
 teams_test = pd.read_csv(f"{DATA_PATH}teams_test.csv")
