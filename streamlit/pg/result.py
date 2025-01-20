@@ -6,7 +6,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report
 import matplotlib.pyplot as plt
 
-plt.rcParams["font.family"] = "Malgun Gothic"  # AppleGothic
+plt.rcParams["font.family"] = "NanumGothic"  # AppleGothic
 plt.rcParams["axes.unicode_minus"] = False
 
 # 사용자 데이터 경로 지정
