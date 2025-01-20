@@ -21,12 +21,6 @@ except Exception as e:
 # st.write("데이터프레임 미리보기:")
 # st.dataframe(df.head())
 
-# 한글 폰트 설정
-import matplotlib.pyplot as plt
-
-plt.rcParams["font.family"] = "Malgun Gothic"  # AppleGothic
-plt.rcParams["axes.unicode_minus"] = False
-
 # 팀 이름 정리 (중복 이름 통합)
 team_name_mapping = {
     "OKSavingsBank Brion": "OKSavingsBank BRION",
