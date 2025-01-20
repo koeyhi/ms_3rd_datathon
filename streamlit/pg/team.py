@@ -8,13 +8,13 @@ DATA_PATH = "streamlit/data/"
 team_df = pd.read_csv(f"{DATA_PATH}team.csv")
 
 # Streamlit 애플리케이션
-# st.title("선수별 성과 방사형 그래프")
+# st.title("팀별 성과 방사형 그래프")
 # st.sidebar.header("필터 설정")
 
-# 연도는 24년 고정
-selected_year = 2024
-
 # 사용자가 선택할 옵션 정의
+available_years = sorted(team_df["year"].unique())
+selected_year = st.selectbox("연도 선택", available_years)
+
 available_leagues = team_df[team_df["year"] == selected_year]["league"].unique()
 selected_league = st.selectbox("리그 선택", available_leagues)
 
@@ -31,7 +31,7 @@ available_teams = team_df[
 selected_team = st.selectbox("팀 선택", available_teams)
 
 # 사용자가 선택할 컬럼 선택
-metrics = ["inhibitors", "kda", "towers", "earned gpm", "gspd"]
+metrics = ["inhibitors", "team kpm", "towers", "earned gpm", "gspd"]
 selected_metrics = st.multiselect("그래프에 표시할 컬럼 선택", metrics, default=metrics)
 
 # 선택된 선수의 스플릿별 전체 평균 데이터 필터링
@@ -84,7 +84,7 @@ if selected_metrics and not filtered_data.empty:
 
     elif len(selected_metrics) == 5:
         # 5개 선택 시: 방사형 그래프
-        max_values = [3, 30, 11, 1500, 0.1]
+        max_values = [3, 1, 11, 1500, 0.1]
         normalized_values = [v / max_val for v, max_val in zip(avg_values, max_values)]
         radar_fig = go.Figure(
             go.Scatterpolar(
