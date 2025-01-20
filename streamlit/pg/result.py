@@ -10,7 +10,8 @@ plt.rcParams["font.family"] = "Malgun Gothic"  # AppleGothic
 plt.rcParams["axes.unicode_minus"] = False
 
 # 사용자 데이터 경로 지정
-DATA_PATH = "data/"
+DATA_PATH = "streamlit/data/"
+# DATA_PATH = "data/"
 team_df = pd.read_csv(f"{DATA_PATH}team.csv")
 
 team_df = team_df[team_df["year"] == 2024]  # 2024년 데이터만 선택
