@@ -3,8 +3,7 @@ import pandas as pd
 import plotly.graph_objects as go
 
 # 데이터 경로와 데이터 로드
-DATA_PATH = "streamlit/data/"
-# DATA_PATH = "data/"
+DATA_PATH = "LoLesports_data/"
 team_df = pd.read_csv(f"{DATA_PATH}team.csv")
 
 # Streamlit 애플리케이션

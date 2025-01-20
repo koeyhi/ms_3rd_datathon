@@ -15,6 +15,7 @@ pg_list = [
     st.Page("pg/result.py", title="상관관계"),
     st.Page("pg/player.py", title="player"),
     st.Page("pg/team.py", title="team"),
+    st.Page("pg/test.py", title="test"),
 ]
 
 pg = st.navigation(pg_list)

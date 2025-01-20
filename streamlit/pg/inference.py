@@ -22,13 +22,13 @@ hj_featured_data = pd.concat([hj_featured_train, hj_featured_test], ignore_index
 hj_featured_data.drop("gameid", axis=1, inplace=True)
 hj_featured_data["side"] = hj_featured_data["side"].map({"Blue": 0, "Red": 1})
 
-with open(f"{DATA_PATH}teams.json", "r") as f:
+with open(f"{ARTIFACTS_PATH}teams.json", "r") as f:
     teams = json.load(f)
 
-with open(f"{DATA_PATH}champions.json", "r") as f:
+with open(f"{ARTIFACTS_PATH}champions.json", "r") as f:
     champions = json.load(f)
 
-with open(f"{DATA_PATH}leagues.json", "r") as f:
+with open(f"{ARTIFACTS_PATH}leagues.json", "r") as f:
     leagues = json.load(f)
 
 temp_opp_teams = (
@@ -44,7 +44,7 @@ from catboost import CatBoostClassifier, Pool
 
 jh_stacking = joblib.load(f"{ARTIFACTS_PATH}stacking_0107.pkl")
 
-with open(f"{DATA_PATH}cat_features.json", "r") as f:
+with open(f"{ARTIFACTS_PATH}cat_features.json", "r") as f:
     cat_cols = json.load(f)
 
 jh_cat = CatBoostClassifier()

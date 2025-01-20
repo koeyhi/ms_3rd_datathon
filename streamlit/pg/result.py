@@ -4,8 +4,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 
 # 사용자 데이터 경로 지정
-DATA_PATH = "streamlit/data/"
-# DATA_PATH = "data/"
+DATA_PATH = "LoLesports_data/"
 team_df = pd.read_csv(f"{DATA_PATH}team.csv")
 
 team_df = team_df[team_df["year"] == 2024]  # 2024년 데이터만 선택
