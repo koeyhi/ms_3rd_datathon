@@ -9,9 +9,7 @@ DATA_PATH = "LoLesports_data/"
 team_df = pd.read_csv(f"{DATA_PATH}team.csv")
 player_df = pd.read_csv(f"{DATA_PATH}player.csv")
 
-# 레이아웃 설정
-st.title("Streamlit Dual Graph Layout")
-st.write("한 페이지에 양쪽으로 그래프를 배치합니다.")
+st.title("팀/선수 주요 지표 방사형 그래프로 확인하기")
 
 # 두 개의 열 생성
 col1, col2 = st.columns(2)
@@ -37,7 +35,7 @@ with col1:
     selected_team = st.selectbox("팀 선택", available_teams)
 
     # 사용자가 선택할 컬럼 선택
-    metrics = ['firstblood', 'firsttower', 'void_grubs', 'dragons' ,'barons']
+    metrics = ["firstblood", "firsttower", "void_grubs", "dragons", "barons"]
     selected_metrics = st.multiselect(
         "그래프에 표시할 컬럼 선택", metrics, default=metrics
     )
@@ -143,7 +141,7 @@ with col2:
     selected_player = st.selectbox("선수 선택", available_players, key="player_name")
 
     # 사용자가 선택할 컬럼 선택
-    metrics = ['kda', 'dpm', 'total cs', 'totalgold', 'visionscore']
+    metrics = ["kda", "dpm", "total cs", "totalgold", "visionscore"]
     selected_metrics = st.multiselect(
         "그래프에 표시할 컬럼 선택", metrics, default=metrics, key="player_metrics"
     )
