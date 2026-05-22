@@ -366,23 +366,28 @@ def get_prediction_confidence(team_win_rate):
 
 
 with st.form("예측 폼", border=True):
-    teamname = st.selectbox("팀", teams)
-    opp_teamname = st.selectbox("상대 팀", teams)
+    teamname = st.selectbox("팀", teams, index=0)
+    opp_teamname = st.selectbox("상대 팀", teams, index=1 if len(teams) > 1 else 0)
     patch = st.number_input("패치 버전", value=14.23)
     league = st.selectbox("리그", leagues)
     side = st.selectbox("진영", ["Blue", "Red"])
     date = st.date_input("날짜", value=datetime.today())
     time = st.time_input("시간", value=datetime.now().time())
-    ban1 = st.selectbox("밴 1", champions)
-    ban2 = st.selectbox("밴 2", champions)
-    ban3 = st.selectbox("밴 3", champions)
-    ban4 = st.selectbox("밴 4", champions)
-    ban5 = st.selectbox("밴 5", champions)
-    pick1 = st.selectbox("픽 1", champions)
-    pick2 = st.selectbox("픽 2", champions)
-    pick3 = st.selectbox("픽 3", champions)
-    pick4 = st.selectbox("픽 4", champions)
-    pick5 = st.selectbox("픽 5", champions)
+
+    default_champion_idx = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+    if len(champions) < 10:
+        default_champion_idx = [i % len(champions) for i in range(10)]
+
+    ban1 = st.selectbox("밴 1", champions, index=default_champion_idx[0])
+    ban2 = st.selectbox("밴 2", champions, index=default_champion_idx[1])
+    ban3 = st.selectbox("밴 3", champions, index=default_champion_idx[2])
+    ban4 = st.selectbox("밴 4", champions, index=default_champion_idx[3])
+    ban5 = st.selectbox("밴 5", champions, index=default_champion_idx[4])
+    pick1 = st.selectbox("픽 1", champions, index=default_champion_idx[5])
+    pick2 = st.selectbox("픽 2", champions, index=default_champion_idx[6])
+    pick3 = st.selectbox("픽 3", champions, index=default_champion_idx[7])
+    pick4 = st.selectbox("픽 4", champions, index=default_champion_idx[8])
+    pick5 = st.selectbox("픽 5", champions, index=default_champion_idx[9])
     submit_button = st.form_submit_button("예측")
 
     input_data = {
