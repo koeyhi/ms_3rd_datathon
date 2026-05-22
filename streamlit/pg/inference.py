@@ -15,12 +15,14 @@ teams_test = pd.read_csv(f"{DATA_PATH}teams_test.csv")
 train_data = pd.concat([teams_train, teams_test], ignore_index=True)
 
 jh_featured_data = pd.read_csv(f"{DATA_PATH}featured_data.csv")
-jh_featured_data.drop("gameid", axis=1, inplace=True)
+if "gameid" in jh_featured_data.columns:
+    jh_featured_data.drop("gameid", axis=1, inplace=True)
 
 hj_featured_train = pd.read_csv(f"{DATA_PATH}TEST88_train.csv")
 hj_featured_test = pd.read_csv(f"{DATA_PATH}TEST88_test.csv")
 hj_featured_data = pd.concat([hj_featured_train, hj_featured_test], ignore_index=True)
-hj_featured_data.drop("gameid", axis=1, inplace=True)
+if "gameid" in hj_featured_data.columns:
+    hj_featured_data.drop("gameid", axis=1, inplace=True)
 hj_featured_data["side"] = hj_featured_data["side"].map({"Blue": 0, "Red": 1})
 
 with open(f"{ARTIFACTS_PATH}teams.json", "r") as f:
