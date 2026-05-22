@@ -5,63 +5,77 @@ import streamlit as st
 import pandas as pd
 import json
 import pytz
+import joblib
+from catboost import CatBoostClassifier, Pool
 
 st.set_page_config(layout="wide")
 DATA_PATH = "LoLesports_data/"
 ARTIFACTS_PATH = "output/"
 
-teams_train = pd.read_csv(f"{DATA_PATH}teams_train.csv")
-teams_test = pd.read_csv(f"{DATA_PATH}teams_test.csv")
-train_data = pd.concat([teams_train, teams_test], ignore_index=True)
+@st.cache_data(show_spinner=False)
+def load_base_data(data_path):
+    teams_train = pd.read_csv(f"{data_path}teams_train.csv")
+    teams_test = pd.read_csv(f"{data_path}teams_test.csv")
+    train_data = pd.concat([teams_train, teams_test], ignore_index=True)
 
-jh_featured_data = pd.read_csv(f"{DATA_PATH}featured_data.csv")
-if "gameid" in jh_featured_data.columns:
-    jh_featured_data.drop("gameid", axis=1, inplace=True)
+    temp_opp_teams = (
+        train_data.groupby("gameid")["teamname"]
+        .transform(lambda x: x.iloc[::-1].values)
+        .to_frame("opp_teamname")
+    )
+    train_data = pd.concat([train_data, temp_opp_teams], axis=1)
+    train_data.drop("gameid", axis=1, inplace=True)
+    train_data["date"] = pd.to_datetime(train_data["date"])
+    train_data["year"] = train_data["date"].dt.year
+    train_data["month"] = train_data["date"].dt.month
+    train_data["day"] = train_data["date"].dt.day
+    train_data["hour"] = train_data["date"].dt.hour
+    train_data["minute"] = train_data["date"].dt.minute
+    train_data.drop("date", axis=1, inplace=True)
+    return train_data
 
-hj_featured_train = pd.read_csv(f"{DATA_PATH}TEST88_train.csv")
-hj_featured_test = pd.read_csv(f"{DATA_PATH}TEST88_test.csv")
-hj_featured_data = pd.concat([hj_featured_train, hj_featured_test], ignore_index=True)
-if "gameid" in hj_featured_data.columns:
-    hj_featured_data.drop("gameid", axis=1, inplace=True)
-hj_featured_data["side"] = hj_featured_data["side"].map({"Blue": 0, "Red": 1})
 
-with open(f"{ARTIFACTS_PATH}teams.json", "r") as f:
-    teams = json.load(f)
+@st.cache_data(show_spinner=False)
+def load_featured_data(data_path):
+    jh_featured_data = pd.read_csv(f"{data_path}featured_data.csv")
+    if "gameid" in jh_featured_data.columns:
+        jh_featured_data.drop("gameid", axis=1, inplace=True)
 
-with open(f"{ARTIFACTS_PATH}champions.json", "r") as f:
-    champions = json.load(f)
+    hj_featured_train = pd.read_csv(f"{data_path}TEST88_train.csv")
+    hj_featured_test = pd.read_csv(f"{data_path}TEST88_test.csv")
+    hj_featured_data = pd.concat([hj_featured_train, hj_featured_test], ignore_index=True)
+    if "gameid" in hj_featured_data.columns:
+        hj_featured_data.drop("gameid", axis=1, inplace=True)
+    if "side" in hj_featured_data.columns:
+        hj_featured_data["side"] = hj_featured_data["side"].map({"Blue": 0, "Red": 1})
+    return jh_featured_data, hj_featured_data
 
-with open(f"{ARTIFACTS_PATH}leagues.json", "r") as f:
-    leagues = json.load(f)
 
-temp_opp_teams = (
-    train_data.groupby("gameid")["teamname"]
-    .transform(lambda x: x.iloc[::-1].values)
-    .to_frame("opp_teamname")
-)
-train_data = pd.concat([train_data, temp_opp_teams], axis=1)
-train_data.drop("gameid", axis=1, inplace=True)
+@st.cache_data(show_spinner=False)
+def load_metadata(artifacts_path):
+    with open(f"{artifacts_path}teams.json", "r") as f:
+        teams = json.load(f)
+    with open(f"{artifacts_path}champions.json", "r") as f:
+        champions = json.load(f)
+    with open(f"{artifacts_path}leagues.json", "r") as f:
+        leagues = json.load(f)
+    with open(f"{artifacts_path}cat_features.json", "r") as f:
+        cat_cols = json.load(f)
+    return teams, champions, leagues, cat_cols
 
-import joblib
-from catboost import CatBoostClassifier, Pool
 
-jh_stacking = joblib.load(f"{ARTIFACTS_PATH}stacking_0107.pkl")
+@st.cache_resource(show_spinner=False)
+def load_models(artifacts_path):
+    jh_stacking = joblib.load(f"{artifacts_path}stacking_0107.pkl")
+    jh_cat = CatBoostClassifier()
+    jh_cat.load_model(f"{artifacts_path}cat_0107.cbm")
+    hj_stacking = joblib.load(f"{artifacts_path}5_stacking_model_0120.pkl")
+    return jh_stacking, jh_cat, hj_stacking
 
-with open(f"{ARTIFACTS_PATH}cat_features.json", "r") as f:
-    cat_cols = json.load(f)
-
-jh_cat = CatBoostClassifier()
-jh_cat.load_model(f"{ARTIFACTS_PATH}cat_0107.cbm")
-
-hj_stacking = joblib.load(f"{ARTIFACTS_PATH}5_stacking_model_0120.pkl")
-
-train_data["date"] = pd.to_datetime(train_data["date"])
-train_data["year"] = train_data["date"].dt.year
-train_data["month"] = train_data["date"].dt.month
-train_data["day"] = train_data["date"].dt.day
-train_data["hour"] = train_data["date"].dt.hour
-train_data["minute"] = train_data["date"].dt.minute
-train_data.drop("date", axis=1, inplace=True)
+train_data = load_base_data(DATA_PATH)
+jh_featured_data, hj_featured_data = load_featured_data(DATA_PATH)
+teams, champions, leagues, cat_cols = load_metadata(ARTIFACTS_PATH)
+jh_stacking, jh_cat, hj_stacking = load_models(ARTIFACTS_PATH)
 
 
 def update_time(input_data):
@@ -415,6 +429,8 @@ with st.form("예측 폼", border=True):
             for error in validation_errors:
                 st.error(error)
         else:
+            jh_featured_data_for_scale = jh_featured_data.copy()
+            hj_featured_data_for_scale = hj_featured_data.copy()
             input_data_for_jh_model = add_recent10_stats(input_data, train_data)
             input_data_for_jh_model = add_h2h_winrate(
                 input_data_for_jh_model, train_data
@@ -450,32 +466,38 @@ with st.form("예측 폼", border=True):
             cat_featured_data_for_jh_model = preprocess(
                 cat_featured_data_for_jh_model, train_data, champions, teams
             )
-            jh_featured_data = preprocess(
-                jh_featured_data, train_data, champions, teams
+            jh_featured_data_for_scale = preprocess(
+                jh_featured_data_for_scale, train_data, champions, teams
             )
 
             input_data_for_hj_model = preprocess(
                 input_data_for_hj_model, train_data, champions, teams
             )
-            hj_featured_data = preprocess(hj_featured_data, train_data, champions, teams)
+            hj_featured_data_for_scale = preprocess(
+                hj_featured_data_for_scale, train_data, champions, teams
+            )
 
-            input_data_for_jh_model = scale(input_data_for_jh_model, jh_featured_data)
+            input_data_for_jh_model = scale(
+                input_data_for_jh_model, jh_featured_data_for_scale
+            )
             cat_input_data_for_jh_model = scale(
-                cat_input_data_for_jh_model, jh_featured_data
+                cat_input_data_for_jh_model, jh_featured_data_for_scale
             )
             cat_featured_data_for_jh_model = scale(
-                cat_featured_data_for_jh_model, jh_featured_data
+                cat_featured_data_for_jh_model, jh_featured_data_for_scale
             )
             cat_input_data_for_jh_model = Pool(
                 cat_input_data_for_jh_model, cat_features=cat_cols
             )
 
-            input_data_for_hj_model = scale(input_data_for_hj_model, hj_featured_data)
+            input_data_for_hj_model = scale(
+                input_data_for_hj_model, hj_featured_data_for_scale
+            )
 
             pred_jh_stacking = jh_stacking.predict_proba(input_data_for_jh_model)
             pred_jh_cat = jh_cat.predict_proba(cat_input_data_for_jh_model)
 
-            input_data_for_hj_model.columns = hj_featured_data.columns
+            input_data_for_hj_model.columns = hj_featured_data_for_scale.columns
             pred_hj_stacking = hj_stacking.predict_proba(input_data_for_hj_model)
 
             pred = np.mean([pred_jh_stacking, pred_jh_cat, pred_hj_stacking], axis=0)
