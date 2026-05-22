@@ -1,4 +1,5 @@
 from datetime import datetime
+from collections import Counter
 import numpy as np
 import streamlit as st
 import pandas as pd
@@ -340,6 +341,14 @@ def scale(input_data, featured_data):
     return input_data
 
 
+def get_prediction_confidence(team_win_rate):
+    if team_win_rate >= 70 or team_win_rate <= 30:
+        return "높음"
+    if team_win_rate >= 60 or team_win_rate <= 40:
+        return "중간"
+    return "낮음"
+
+
 with st.form("예측 폼", border=True):
     teamname = st.selectbox("팀", teams)
     opp_teamname = st.selectbox("상대 팀", teams)
@@ -384,63 +393,106 @@ with st.form("예측 폼", border=True):
     }
 
     if submit_button:
-        input_data_for_jh_model = add_recent10_stats(input_data, train_data)
-        input_data_for_jh_model = add_h2h_winrate(input_data_for_jh_model, train_data)
-        input_data_for_jh_model = add_league_winrate(
-            input_data_for_jh_model, train_data
-        )
-        (
-            input_data_for_jh_model,
-            cat_input_data_for_jh_model,
-            cat_featured_data_for_jh_model,
-        ) = split_data(input_data_for_jh_model, jh_featured_data)
+        validation_errors = []
+        if teamname == opp_teamname:
+            validation_errors.append("팀과 상대 팀은 서로 달라야 합니다.")
 
-        input_data_for_hj_model = update_time(input_data)
-        input_data_for_hj_model = add_recent10_stats(
-            input_data_for_hj_model, train_data
-        )
-        input_data_for_hj_model = add_h2h_winrate(input_data_for_hj_model, train_data)
-        input_data_for_hj_model = add_league_winrate(
-            input_data_for_hj_model, train_data
-        )
-        (
-            input_data_for_hj_model,
-            cat_input_data_for_hj_model,
-            cat_featured_data_for_hj_model,
-        ) = split_data(input_data_for_hj_model, hj_featured_data)
+        draft_champions = [ban1, ban2, ban3, ban4, ban5, pick1, pick2, pick3, pick4, pick5]
+        duplicated_champions = [
+            champion
+            for champion, count in Counter(draft_champions).items()
+            if count > 1
+        ]
+        if duplicated_champions:
+            duplicate_text = ", ".join(duplicated_champions[:5])
+            validation_errors.append(
+                f"밴/픽에 중복 챔피언이 있습니다: {duplicate_text}. 중복 없이 선택해주세요."
+            )
 
-        input_data_for_jh_model = preprocess(
-            input_data_for_jh_model, train_data, champions, teams
-        )
-        cat_featured_data_for_jh_model = preprocess(
-            cat_featured_data_for_jh_model, train_data, champions, teams
-        )
-        jh_featured_data = preprocess(jh_featured_data, train_data, champions, teams)
+        if validation_errors:
+            for error in validation_errors:
+                st.error(error)
+        else:
+            input_data_for_jh_model = add_recent10_stats(input_data, train_data)
+            input_data_for_jh_model = add_h2h_winrate(
+                input_data_for_jh_model, train_data
+            )
+            input_data_for_jh_model = add_league_winrate(
+                input_data_for_jh_model, train_data
+            )
+            (
+                input_data_for_jh_model,
+                cat_input_data_for_jh_model,
+                cat_featured_data_for_jh_model,
+            ) = split_data(input_data_for_jh_model, jh_featured_data)
 
-        input_data_for_hj_model = preprocess(
-            input_data_for_hj_model, train_data, champions, teams
-        )
-        hj_featured_data = preprocess(hj_featured_data, train_data, champions, teams)
+            input_data_for_hj_model = update_time(input_data)
+            input_data_for_hj_model = add_recent10_stats(
+                input_data_for_hj_model, train_data
+            )
+            input_data_for_hj_model = add_h2h_winrate(
+                input_data_for_hj_model, train_data
+            )
+            input_data_for_hj_model = add_league_winrate(
+                input_data_for_hj_model, train_data
+            )
+            (
+                input_data_for_hj_model,
+                cat_input_data_for_hj_model,
+                cat_featured_data_for_hj_model,
+            ) = split_data(input_data_for_hj_model, hj_featured_data)
 
-        input_data_for_jh_model = scale(input_data_for_jh_model, jh_featured_data)
-        cat_input_data_for_jh_model = scale(
-            cat_input_data_for_jh_model, jh_featured_data
-        )
-        cat_featured_data_for_jh_model = scale(
-            cat_featured_data_for_jh_model, jh_featured_data
-        )
-        cat_input_data_for_jh_model = Pool(
-            cat_input_data_for_jh_model, cat_features=cat_cols
-        )
+            input_data_for_jh_model = preprocess(
+                input_data_for_jh_model, train_data, champions, teams
+            )
+            cat_featured_data_for_jh_model = preprocess(
+                cat_featured_data_for_jh_model, train_data, champions, teams
+            )
+            jh_featured_data = preprocess(
+                jh_featured_data, train_data, champions, teams
+            )
 
-        input_data_for_hj_model = scale(input_data_for_hj_model, hj_featured_data)
+            input_data_for_hj_model = preprocess(
+                input_data_for_hj_model, train_data, champions, teams
+            )
+            hj_featured_data = preprocess(hj_featured_data, train_data, champions, teams)
 
-        pred_jh_stacking = jh_stacking.predict_proba(input_data_for_jh_model)
-        pred_jh_cat = jh_cat.predict_proba(cat_input_data_for_jh_model)
+            input_data_for_jh_model = scale(input_data_for_jh_model, jh_featured_data)
+            cat_input_data_for_jh_model = scale(
+                cat_input_data_for_jh_model, jh_featured_data
+            )
+            cat_featured_data_for_jh_model = scale(
+                cat_featured_data_for_jh_model, jh_featured_data
+            )
+            cat_input_data_for_jh_model = Pool(
+                cat_input_data_for_jh_model, cat_features=cat_cols
+            )
 
-        input_data_for_hj_model.columns = hj_featured_data.columns
-        pred_hj_stacking = hj_stacking.predict_proba(input_data_for_hj_model)
+            input_data_for_hj_model = scale(input_data_for_hj_model, hj_featured_data)
 
-        pred = np.mean([pred_jh_stacking, pred_jh_cat, pred_hj_stacking], axis=0)
-        st.write(f"{teamname} 승리 확률: {pred[0][1] * 100:.1f}%")
-        st.write(f"{opp_teamname} 승리 확률: {pred[0][0] * 100:.1f}%")
+            pred_jh_stacking = jh_stacking.predict_proba(input_data_for_jh_model)
+            pred_jh_cat = jh_cat.predict_proba(cat_input_data_for_jh_model)
+
+            input_data_for_hj_model.columns = hj_featured_data.columns
+            pred_hj_stacking = hj_stacking.predict_proba(input_data_for_hj_model)
+
+            pred = np.mean([pred_jh_stacking, pred_jh_cat, pred_hj_stacking], axis=0)
+
+            team_win_rate = pred[0][1] * 100
+            opp_win_rate = pred[0][0] * 100
+
+            st.subheader("예측 결과")
+            st.caption(
+                f"리그: {league} | 패치: {patch} | 진영: {side} | 경기 시간: {date} {time.strftime('%H:%M')}"
+            )
+
+            col1, col2 = st.columns(2)
+            col1.metric(f"{teamname} 승리 확률", f"{team_win_rate:.1f}%")
+            col2.metric(f"{opp_teamname} 승리 확률", f"{opp_win_rate:.1f}%")
+
+            st.info(f"예측 신뢰도: {get_prediction_confidence(team_win_rate)}")
+
+            with st.expander("모델별 확률 보기"):
+                st.write(f"Stacking-A ({teamname}) : {pred_jh_stacking[0][1] * 100:.1f}%")
+                st.write(f"CatBoost ({teamname}) : {pred_jh_cat[0][1] * 100:.1f}%")
+                st.write(f"Stacking-B ({teamname}) : {pred_hj_stacking[0][1] * 100:.1f}%")
